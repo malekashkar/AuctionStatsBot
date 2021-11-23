@@ -35,11 +35,12 @@ export default class Bot extends Client {
 
         this.login(this.token);
         this.once("ready", (c) => this.onReady(c));
-        this.on("interactionCreate", async(interaction) => {await this.onInteraction(interaction)});
+        this.on("interactionCreate", async(interaction) => { await this.onInteraction(interaction) });
     }
 
     async onReady(client: Client) {
         await this.loadCommands();
+        await this.startChecker();
         console.log(`[BOT] Logged in successfuly to ${client.user.tag}!`);
     }
 
@@ -73,24 +74,34 @@ export default class Bot extends Client {
                             
                             if(endedAuction.seller == uuid) {
                                 item.sellPrice = endedAuction.price - ((endedAuction.price * 0.02) + 1200);
-                                // notify the user
+                                if(discordUser) {
+                                    try {
+                                        const channel = await discordUser.dmChannel.fetch();
+                                        await channel.send({
+                                            embeds: [
+                                                embeds.normal(
+                                                    `Item Sold`,
+                                                    `You have sold your **${nbtData.name}** for **${item.sellPrice} coins**.`
+                                                )
+                                            ]
+                                        });
+                                    } catch(ignored) {}
+                                }
                             } else {
                                 item.buyPrice = endedAuction.price;
-                                // notify the user
-                            }
-
-                            if(discordUser) {
-                                try {
-                                    const channel = await discordUser.dmChannel.fetch();
-                                    await channel.send({
-                                        embeds: [
-                                            embeds.normal(
-                                                `Item ${endedAuction.seller == uuid ? "Sold" : "Bought"}`,
-                                                `You have sold/bought this.`
-                                            )
-                                        ]
-                                    });
-                                } catch(ignored) {}
+                                if(discordUser) {
+                                    try {
+                                        const channel = await discordUser.dmChannel.fetch();
+                                        await channel.send({
+                                            embeds: [
+                                                embeds.normal(
+                                                    `Item Purchased`,
+                                                    `You purchased a **${nbtData.name}** for **${item.buyPrice} coins**.`
+                                                )
+                                            ]
+                                        });
+                                    } catch(ignored) {}
+                                }
                             }
 
                             await profile.save();
