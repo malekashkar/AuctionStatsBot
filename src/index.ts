@@ -148,8 +148,6 @@ export default class Bot extends Client {
             }
         }
 
-        // Delete
-
         await this.restAPI.put(
             Routes.applicationGuildCommands(this.user.id, this.mainGuildId),
             { 
