@@ -7,16 +7,19 @@ import Command from "./commands/index";
 import { Client, ClientOptions, Interaction, Collection, Intents } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
-import { getEndedAuctions } from "./utils";
-import { UserModel } from "./models/user";
 
-import "./database";
+import "./utils/database";
+import { getEndedAuctions } from './utils/api';
+import { Item, UserModel } from './models/user';
+import { parseNbtData } from './utils';
+import embeds from './utils/embeds';
 
 dotenv.config();
 
 export default class Bot extends Client {
     token = process.env.TOKEN;
     mainGuildId = "863476006122815498";
+    projectName = "AuctionStats";
 
     commands: Collection<String, Command> = new Collection();
     restAPI = new REST({ version: '9' }).setToken(this.token);
@@ -57,33 +60,43 @@ export default class Bot extends Client {
     async startChecker() {
         this.checker = setInterval(async() => {
             const response = await getEndedAuctions();
-            const userIds = await UserModel.aggregate();
-
             if(response.lastUpdated !== this.hypixelApiLastUpdated) {
-                // Push something into the database
+                const uuids = await UserModel.distinct("uuid");
+                for(const endedAuction of response.auctions) {
+                    for(const uuid of uuids) {
+                        if(endedAuction.seller == uuid || endedAuction.buyer == uuid) {
+                            // Create a transaction here
+                            const profile = await UserModel.findOne({ uuid });
+                            const discordUser = await this.users.fetch(profile.discordId);
+                            const nbtData = await parseNbtData(endedAuction.item_bytes);
+                            const item = profile.inventory.find(item => item.uuid == nbtData.uuid) || new Item(nbtData.name, nbtData.uuid, endedAuction.timestamp);
+                            
+                            if(endedAuction.seller == uuid) {
+                                item.sellPrice = endedAuction.price - ((endedAuction.price * 0.02) + 1200);
+                                // notify the user
+                            } else {
+                                item.buyPrice = endedAuction.price;
+                                // notify the user
+                            }
 
+                            if(discordUser) {
+                                try {
+                                    const channel = await discordUser.dmChannel.fetch();
+                                    await channel.send({
+                                        embeds: [
+                                            embeds.normal(
+                                                `Item ${endedAuction.seller == uuid ? "Sold" : "Bought"}`,
+                                                `You have sold/bought this.`
+                                            )
+                                        ]
+                                    });
+                                } catch(ignored) {}
+                            }
 
-                // for(const endedAuction of response.auctions) {
-                //     for(const userId of userIds) {
-                //         if(endedAuction.seller == userId) {
-                //             await registerAuction(
-                //                 userId,
-                //                 endedAuction.item_bytes,
-                //                 endedAuction.timestamp,
-                //                 endedAuction.price,
-                //                 true
-                //             );
-                //         } else if(endedAuction.buyer == userId) {
-                //             await registerAuction(
-                //                 userId,
-                //                 endedAuction.item_bytes,
-                //                 endedAuction.timestamp,
-                //                 endedAuction.price,
-                //                 false
-                //             );
-                //         }
-                //     }
-                // }
+                            await profile.save();
+                        }
+                    }
+                }
                 this.hypixelApiLastUpdated = response.lastUpdated;
             }
         }, 1000);

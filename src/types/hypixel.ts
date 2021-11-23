@@ -57,3 +57,14 @@ export interface EndedAuctionsResponse {
     lastUpdated: number
     auctions: EndedAuction[]
 }
+
+export interface PlayerResponse {
+    success: boolean;
+    player: {
+        socialMedia?: {
+            links?: {
+                DISCORD?: string;
+            }
+        }
+    }
+}

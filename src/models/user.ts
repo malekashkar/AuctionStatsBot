@@ -1,45 +1,51 @@
-import { getModelForClass, prop } from "@typegoose/typegoose";
+import { DocumentType, getModelForClass, prop, ReturnModelType } from "@typegoose/typegoose";
+import { parseNbtData } from "../utils";
 
-export class UserData {
-    @prop({ default: 0 })
-    profit: Number;
-
-    @prop({ default: 0 })
-    grossProfit: Number;
-
-    @prop({ default: 0 })
-    moneySpent: Number;
-}
-
-export class Inventory {
+export class Item {
     @prop()
-    name: String;
+    name: string;
 
     @prop()
-    uuid: String;
+    uuid: string;
 
     @prop()
-    timestamp: Number;
+    timestamp: number;
 
     @prop()
-    price: Number;
+    buyPrice: number;
+
+    @prop()
+    sellPrice: number;
+
+    constructor(name: string, uuid: string, timestamp: number, buyPrice: number = 0, sellPrice: number = 0) {
+      this.name = name;
+      this.uuid = uuid;
+      this.timestamp = timestamp;
+      this.buyPrice = buyPrice;
+      this.sellPrice = sellPrice;
+    }
 }
 
 export default class DbUser {
   @prop({ required: true })
-  discordId: String;
+  discordId: string;
+
+  @prop({ required: true})
+  discordTag: string;
 
   @prop({ required: true })
-  uuid: String;
+  playerName: string;
+
+  @prop({ required: true })
+  uuid: string;
 
   @prop({ default: [] })
-  inventory: Inventory[];
+  inventory: Item[];
 
-  @prop({ default: UserData })
-  data: UserData;
-
-  constructor(discordId: string, uuid: string) {
+  constructor(discordId: string, discordTag: string, playerName: string, uuid: string) {
     this.discordId = discordId;
+    this.discordTag = discordTag;
+    this.playerName = playerName;
     this.uuid = uuid;
   }
 }

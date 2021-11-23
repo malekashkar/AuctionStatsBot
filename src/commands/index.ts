@@ -2,14 +2,14 @@ import Bot from "../index";
 import { CommandInteraction } from "discord.js";
 
 export default abstract class Command {
+  options: any[] = [];
   disabled = false;
-  usage = "";
 
   bot: Bot;
 
   abstract name: string;
   abstract description: string;
-  abstract options: any[];
+  
 
   constructor(bot: Bot) {
       this.bot = bot;
